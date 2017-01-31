@@ -28,6 +28,8 @@ SYMBOLS_REPLACEMENT = {
     "@": "AT",
     "$": "DOLLAR",
     "0": "ZERO",
+    "{": "OPEN_CURLY",
+    "}": "CLOSE_CURLY"
 }
 
 
@@ -127,6 +129,48 @@ class VimKeys(object):
 
     def ZERO(self, repeat=1):
         self._move_cursor(QTextCursor.StartOfLine)
+
+    def OPEN_CURLY(self, repeat=1):
+        editor = self._widget.editor()
+        cursor = editor.textCursor()
+        searching = True
+        while searching:
+            cursor = QTextCursor(cursor.block().previous())
+            text = self._get_line(cursor)
+            if text == '\u2029':
+                if repeat == 1:
+                    searching = False
+                else:
+                    repeat -= 1
+            else:
+                if cursor.atStart():
+                    searching = False
+        editor.setTextCursor(cursor)
+        self._widget.update_vim_cursor()
+
+    def CLOSE_CURLY(self, repeat=1):
+        editor = self._widget.editor()
+        cursor = editor.textCursor()
+        cur_block = cursor.block()
+        last_block = editor.document().lastBlock()
+        searching = True
+        while searching:
+            if last_block == cur_block:
+                cursor.movePosition(QTextCursor.EndOfLine)
+                searching = False
+            else:
+                cursor = QTextCursor(cur_block.next())
+                cur_block = cursor.block()
+                text = self._get_line(cursor)
+                if not text or text == '\u2029':
+                    if repeat == 1:
+                        if last_block == cur_block:
+                            cursor.movePosition(QTextCursor.EndOfLine)
+                        searching = False
+                    else:
+                        repeat -= 1
+        editor.setTextCursor(cursor)
+        self._widget.update_vim_cursor()
 
     def G(self, repeat=-1):
         if repeat == -1:
